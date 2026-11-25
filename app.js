@@ -97,7 +97,7 @@ function saudacao() {
   const h = new Date().getHours();
   return h < 12 ? "Bom dia ☀️" : h < 18 ? "Boa tarde 👋" : "Boa noite 🌙";
 }
-$("#backBtn").onclick = () => (location.hash = "#/");
+$("#backBtn").onclick = () => (location.hash = "");
 window.addEventListener("hashchange", route);
 
 /* ---------------- Home ---------------- */
@@ -127,7 +127,7 @@ function renderHome() {
     </div>
     <div class="section-label">Próximos alertas</div>
     <div class="list">${upcomingAlerts().slice(0, 4).map(a => `
-      <a class="item" href="#/${a.section}" style="text-decoration:none;color:inherit">
+      <a class="item" href="#${a.section}" style="text-decoration:none;color:inherit">
         <div class="body"><div class="t">${esc(a.title)}</div><div class="s">${esc(a.body)}</div></div>
         <span class="tag">${a.at.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${a.at.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
       </a>`).join("") || `<div class="empty">Nenhum alerta programado</div>`}
@@ -138,7 +138,7 @@ function renderHome() {
 }
 function card(sec, sub) {
   const s = SECTIONS[sec];
-  return `<a class="card ${s.cls}" href="#/${sec}">
+  return `<a class="card ${s.cls}" href="#${sec}">
     <div class="emoji">${s.emoji}</div>
     <div><h3>${s.title}</h3><p>${sub}</p></div>
   </a>`;
@@ -172,7 +172,7 @@ function renderSearch(q) {
   const nq = norm(q);
   const hits = searchIndex().filter(r => norm(r.title + " " + r.sub + " " + SECTIONS[r.sec].title).includes(nq));
   box.innerHTML = `<div class="list" style="margin-bottom:16px">${hits.map(r => `
-    <a class="item" href="#/${r.sec}" style="text-decoration:none;color:inherit">
+    <a class="item" href="#${r.sec}" style="text-decoration:none;color:inherit">
       <div class="emoji" style="font-size:20px">${SECTIONS[r.sec].emoji}</div>
       <div class="body">
         <div class="t">${highlight(r.title, q)}</div>
@@ -321,12 +321,25 @@ function fab(onClick) {
   document.body.appendChild(b);
 }
 function removeItem(key, id, rerender) {
-  if (!confirm("Apagar este item?")) return;
-  db[key] = db[key].filter(x => x.id !== id); saveDB(); rerender(); toast("Item apagado");
+  // Apaga na hora e oferece "Desfazer" (mais rápido que uma caixa de confirmação).
+  const idx = db[key].findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const [removed] = db[key].splice(idx, 1);
+  saveDB(); rerender();
+  toast("Item apagado", "Desfazer", () => { db[key].splice(idx, 0, removed); saveDB(); rerender(); });
 }
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+function toast(msg, actionLabel, onAction, ms = 2600) {
+  const t = $("#toast");
+  t.textContent = msg;
+  if (actionLabel) {
+    const b = document.createElement("button");
+    b.className = "toast-action"; b.textContent = actionLabel;
+    b.onclick = () => { t.classList.remove("show"); onAction(); };
+    t.appendChild(b);
+    ms = 4500;
+  }
+  t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), ms);
 }
 
 const sheet = $("#sheet");
@@ -397,7 +410,7 @@ function setNotified(s) { try { localStorage.setItem(NOTIFIED_KEY, JSON.stringif
 
 async function notify(title, body, section) {
   if (!("Notification" in window) || Notification.permission !== "granted") return false;
-  const opts = { body, icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: title, data: { url: `#/${section || ""}` } };
+  const opts = { body, icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: title, data: { url: `#${section || ""}` } };
   try {
     const reg = await navigator.serviceWorker?.ready;
     if (reg) { await reg.showNotification(title, opts); return true; }
@@ -427,17 +440,17 @@ $("#bellBtn").onclick = async () => {
   const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone)").matches;
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
   if (!("Notification" in window)) {
-    return alert(isIOS && !standalone
-      ? "No iPhone, as notificações só funcionam depois de adicionar o app à Tela de Início (Safari → Compartilhar → Adicionar à Tela de Início) e abri-lo por lá."
-      : "Este navegador não suporta notificações.");
+    return toast(isIOS && !standalone
+      ? "No iPhone, as notificações só funcionam com o app adicionado à Tela de Início e aberto pelo ícone."
+      : "Este navegador não permite notificações aqui.", null, null, 5000);
   }
-  if (Notification.permission === "default") await Notification.requestPermission();
+  try { if (Notification.permission === "default") await Notification.requestPermission(); } catch {}
   if (Notification.permission === "granted") {
     await notify("🔔 Notificações ativadas", "Você receberá alertas da agenda, contas e saúde.", "");
     toast("Notificações ativadas ✓");
     checkAlerts();
   } else {
-    alert("Notificações bloqueadas. Ative em Ajustes → Notificações → Meu App.");
+    toast("Notificações bloqueadas. Ative em Ajustes → Notificações → Meu App.", null, null, 5000);
   }
 };
 
