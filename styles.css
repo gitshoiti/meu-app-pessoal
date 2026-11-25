@@ -262,3 +262,30 @@ mark { background: color-mix(in srgb, var(--finance) 40%, transparent); color: i
 .hint-ic { color: var(--accent); font-size: 24px; }
 .goal.reached .goal-meta .ms { font-variation-settings: "FILL" 1; }
 .icon-btn[hidden] { display: none; }
+
+/* ---------- Prévia das metas na Home ---------- */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.section-head .section-label { margin-bottom: 8px; }
+.see-all { color: var(--accent); font-size: 14px; font-weight: 600; text-decoration: none; }
+.goal-minis {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+}
+.goal-mini {
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 14px;
+  color: var(--text); text-decoration: none;
+}
+.goal-mini + .goal-mini { border-top: 1px solid var(--border); }
+.gm-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.gm-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-pct { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--finance); white-space: nowrap; }
+.goal-mini.reached .gm-pct { color: var(--tasks); }
+.goal-mini.reached .gm-pct .ms { font-variation-settings: "FILL" 1; margin-right: 2px; }
+.gm-sub { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar.sm { height: 8px; }
+.goal-mini.reached .bar-fill { background: linear-gradient(90deg, color-mix(in srgb, var(--tasks) 75%, #fff), var(--tasks)); }
+.empty-mini {
+  flex-direction: row; align-items: center; justify-content: center; gap: 6px;
+  color: var(--accent); font-weight: 600;
+  background: var(--surface); border: 1px dashed var(--border); border-radius: 16px;
+}

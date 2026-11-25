@@ -1,5 +1,5 @@
 // Service Worker: funciona offline e trata cliques nas notificações.
-const CACHE = "meuapp-v4";
+const CACHE = "meuapp-v5";
 const ASSETS = ["./", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

@@ -139,6 +139,7 @@ function renderHome() {
       ${card("financeiro", openBills.length ? `${openBills.length} a pagar` : "Em dia")}
       ${card("medica", nextHealth ? shortDay(nextHealth.date) : `${db.health.length} reg.`)}
     </div>
+    ${homeGoals()}
     <div class="section-label">Próximos alertas</div>
     <div class="list">${upcomingAlerts().slice(0, 4).map(a => `
       <a class="item" href="#${a.section}" style="text-decoration:none;color:inherit">
@@ -150,6 +151,8 @@ function renderHome() {
 
   const q = $("#q");
   q.addEventListener("input", () => renderSearch(q.value));
+  // Links das metas abrem o Financeiro já na aba Metas
+  view.onclick = e => { if (e.target.closest("[data-metas]")) { financeTab = "metas"; saveTab(); } };
 }
 function card(sec, sub) {
   const s = SECTIONS[sec];
@@ -158,6 +161,25 @@ function card(sec, sub) {
     <h3>${s.short}</h3><p>${sub}</p>
   </a>`;
 }
+// Prévia das metas na Home: as que ainda faltam primeiro, no máximo 3
+function homeGoals() {
+  const goals = [...db.goals].sort((a, b) => (goalSaved(a) >= a.target) - (goalSaved(b) >= b.target)).slice(0, 3);
+  const head = `<div class="section-head">
+      <div class="section-label">Metas</div>
+      ${db.goals.length ? `<a href="#financeiro" data-metas class="see-all">Ver todas${db.goals.length > 3 ? ` (${db.goals.length})` : ""}</a>` : ""}
+    </div>`;
+  if (!goals.length) return head + `<a href="#financeiro" data-metas class="goal-mini empty-mini">${ic("add")} Criar sua primeira meta</a>`;
+  return head + `<div class="goal-minis">${goals.map(g => {
+    const saved = goalSaved(g), pct = g.target > 0 ? Math.min(100, saved / g.target * 100) : 0, reached = saved >= g.target;
+    return `<a href="#financeiro" data-metas class="goal-mini ${reached ? "reached" : ""}" aria-label="${esc(g.name)}: ${Math.floor(pct)}%">
+      <div class="gm-top"><span class="gm-name">${esc(g.name)}</span>
+        <span class="gm-pct">${reached ? ic("emoji_events", "inline") : ""}${Math.floor(pct)}%</span></div>
+      <div class="bar sm"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="gm-sub">${money(saved)} de ${money(g.target)}</div>
+    </a>`;
+  }).join("")}</div>`;
+}
+
 // "Hoje", "Amanhã" ou "29/11", curto para caber no card
 function shortDay(date) {
   const d = daysUntil(date);
