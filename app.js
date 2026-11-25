@@ -85,11 +85,14 @@ const daysUntil = date => {
 const money = v => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 /* ---------------- Seções ---------------- */
+// Ícone do Material Symbols (fonte do Google, carregada no index.html)
+const ic = (name, cls = "") => `<span class="ms ${cls}" aria-hidden="true">${name}</span>`;
+
 const SECTIONS = {
-  tarefas:    { title: "Afazeres",     short: "Afazeres", emoji: "✅", cls: "c-tasks",   key: "tasks" },
-  agenda:     { title: "Minha Agenda", short: "Agenda",   emoji: "📅", cls: "c-agenda",  key: "events" },
-  financeiro: { title: "Financeiro",   short: "Finanças", emoji: "💰", cls: "c-finance", key: "bills" },
-  medica:     { title: "Médico",       short: "Médico",   emoji: "🩺", cls: "c-health",  key: "health" },
+  tarefas:    { title: "Afazeres",     short: "Afazeres", icon: "checklist", cls: "c-tasks",   key: "tasks" },
+  agenda:     { title: "Minha Agenda", short: "Agenda",   icon: "calendar_month", cls: "c-agenda",  key: "events" },
+  financeiro: { title: "Financeiro",   short: "Finanças", icon: "account_balance_wallet", cls: "c-finance", key: "bills" },
+  medica:     { title: "Médico",       short: "Médico",   icon: "stethoscope", cls: "c-health",  key: "health" },
 };
 
 /* ---------------- Roteador ---------------- */
@@ -98,14 +101,15 @@ function route() {
   const name = (location.hash.replace(/^#\/?/, "") || "home").split("?")[0];
   const sec = SECTIONS[name];
   $("#backBtn").hidden = !sec;
-  $("#title").textContent = sec ? sec.title : saudacao();
+  $("#title").innerHTML = sec ? esc(sec.title) : saudacao();
   document.querySelectorAll(".fab").forEach(f => f.remove());
   ({ home: renderHome, tarefas: renderTasks, agenda: renderAgenda, financeiro: renderFinance, medica: renderHealth }[name] || renderHome)();
   window.scrollTo(0, 0);
 }
 function saudacao() {
   const h = new Date().getHours();
-  return h < 12 ? "Bom dia ☀️" : h < 18 ? "Boa tarde 👋" : "Boa noite 🌙";
+  const [txt, icon] = h < 12 ? ["Bom dia", "light_mode"] : h < 18 ? ["Boa tarde", "wb_twilight"] : ["Boa noite", "dark_mode"];
+  return `${txt} ${ic(icon, "greet")}`;
 }
 $("#backBtn").onclick = () => (location.hash = "");
 window.addEventListener("hashchange", route);
@@ -125,7 +129,7 @@ function renderHome() {
   view.innerHTML = `
     ${installHint()}
     <label class="search">
-      <span>🔎</span>
+      ${ic("search")}
       <input id="q" type="search" placeholder="Buscar em todas as seções…" autocomplete="off" enterkeyhint="search" />
     </label>
     <div id="results"></div>
@@ -138,6 +142,7 @@ function renderHome() {
     <div class="section-label">Próximos alertas</div>
     <div class="list">${upcomingAlerts().slice(0, 4).map(a => `
       <a class="item" href="#${a.section}" style="text-decoration:none;color:inherit">
+        <div class="row-ic ${SECTIONS[a.section].cls}">${ic(SECTIONS[a.section].icon)}</div>
         <div class="body"><div class="t">${esc(a.title)}</div><div class="s">${esc(a.body)}</div></div>
         <span class="tag">${a.at.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${a.at.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
       </a>`).join("") || `<div class="empty">Nenhum alerta programado</div>`}
@@ -149,7 +154,7 @@ function renderHome() {
 function card(sec, sub) {
   const s = SECTIONS[sec];
   return `<a class="card ${s.cls}" href="#${sec}">
-    <div class="emoji">${s.emoji}</div>
+    <div class="emoji">${ic(s.icon)}</div>
     <h3>${s.short}</h3><p>${sub}</p>
   </a>`;
 }
@@ -161,7 +166,7 @@ function shortDay(date) {
 function installHint() {
   const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone)").matches;
   if (standalone) return "";
-  return `<div class="hint">📲 <b>Dica:</b> no Safari, toque em <b>Compartilhar</b> ⬆️ → <b>Adicionar à Tela de Início</b> para usar como app e receber notificações.</div>`;
+  return `<div class="hint">${ic("install_mobile", "hint-ic")}<div><b>Dica:</b> no Safari, toque em <b>Compartilhar</b> ${ic("ios_share", "inline")} → <b>Adicionar à Tela de Início</b> para usar como app e receber notificações.</div></div>`;
 }
 
 /* ---------------- Busca global ---------------- */
@@ -189,7 +194,7 @@ function renderSearch(q) {
   const hits = searchIndex().filter(r => norm(r.title + " " + r.sub + " " + SECTIONS[r.sec].title).includes(nq));
   box.innerHTML = `<div class="list" style="margin-bottom:16px">${hits.map(r => `
     <a class="item" href="#${r.sec}" style="text-decoration:none;color:inherit">
-      <div class="emoji" style="font-size:20px">${SECTIONS[r.sec].emoji}</div>
+      <div class="row-ic ${SECTIONS[r.sec].cls}">${ic(SECTIONS[r.sec].icon)}</div>
       <div class="body">
         <div class="t">${highlight(r.title, q)}</div>
         <div class="s">${highlight(r.sub, q)}</div>
@@ -207,7 +212,7 @@ function renderTasks() {
       <input type="checkbox" class="check" data-toggle="${t.id}" ${t.done ? "checked" : ""} aria-label="Concluir" />
       <div class="body"><div class="t">${esc(t.title)}</div>${t.due ? `<div class="s">${fmtDate(t.due)}</div>` : ""}</div>
       ${late ? `<span class="tag late">Atrasada</span>` : ""}
-      <button class="mini" data-del="${t.id}" aria-label="Apagar">🗑</button>
+      <button class="mini" data-del="${t.id}" aria-label="Apagar">${ic("delete")}</button>
     </div>`;
   }).join("") || `<div class="empty">Nenhum afazer. Toque em + para adicionar.</div>`}</div>`;
 
@@ -231,13 +236,13 @@ function renderAgenda() {
   const past = sorted.filter(e => !future.includes(e)).reverse();
   const row = e => `<div class="item">
       <div class="body"><div class="t">${esc(e.title)}</div>
-      <div class="s">${fmtDate(e.date, e.time)}${e.place ? " · 📍 " + esc(e.place) : ""}</div></div>
-      ${e.alertMin >= 0 ? `<span class="tag">🔔 ${ALERT_OPTS.find(o => +o[0] === +e.alertMin)?.[1] ?? ""}</span>` : ""}
-      <button class="mini" data-ics="${e.id}" aria-label="Adicionar ao Calendário">📆</button>
-      <button class="mini" data-del="${e.id}" aria-label="Apagar">🗑</button>
+      <div class="s">${fmtDate(e.date, e.time)}${e.place ? " · " + ic("location_on", "inline") + esc(e.place) : ""}</div></div>
+      ${e.alertMin >= 0 ? `<span class="tag">${ic("notifications", "inline")} ${ALERT_OPTS.find(o => +o[0] === +e.alertMin)?.[1] ?? ""}</span>` : ""}
+      <button class="mini" data-ics="${e.id}" aria-label="Adicionar ao Calendário">${ic("event")}</button>
+      <button class="mini" data-del="${e.id}" aria-label="Apagar">${ic("delete")}</button>
     </div>`;
   view.innerHTML = `
-    <div class="row-actions"><button class="btn" id="icsAll">📆 Enviar tudo ao Calendário do iPhone</button></div>
+    <div class="row-actions"><button class="btn" id="icsAll">${ic("event")} Enviar tudo ao Calendário do iPhone</button></div>
     <div class="list">${future.map(row).join("") || `<div class="empty">Sem compromissos futuros.</div>`}</div>
     ${past.length ? `<div class="section-label">Anteriores</div><div class="list">${past.map(row).join("")}</div>` : ""}`;
   $("#icsAll").onclick = () => exportICS(db.events.map(eventToICS), "agenda.ics");
@@ -270,8 +275,8 @@ function renderFinance() {
       <input type="checkbox" class="check" data-toggle="${b.id}" ${b.paid ? "checked" : ""} aria-label="Marcar como paga" />
       <div class="body"><div class="t">${esc(b.name)}</div><div class="s">${money(b.amount)} · vence ${fmtDate(b.due)}</div></div>
       ${tag}
-      <button class="mini" data-ics="${b.id}" aria-label="Adicionar ao Calendário">📆</button>
-      <button class="mini" data-del="${b.id}" aria-label="Apagar">🗑</button>
+      <button class="mini" data-ics="${b.id}" aria-label="Adicionar ao Calendário">${ic("event")}</button>
+      <button class="mini" data-del="${b.id}" aria-label="Apagar">${ic("delete")}</button>
     </div>`;
   };
   const tabs = `<div class="segmented" role="tablist">
@@ -285,8 +290,8 @@ function renderFinance() {
       <div><b>${open.length}</b><span>a pagar</span></div>
       <div><b style="color:${late ? "var(--danger)" : "inherit"}">${late}</b><span>vencidas</span></div>
     </div>
-    <div class="row-actions"><button class="btn" id="icsAll">📆 Lembretes no Calendário do iPhone</button></div>
-    <div class="list">${open.map(row).join("") || `<div class="empty">Nenhuma conta em aberto 🎉</div>`}</div>
+    <div class="row-actions"><button class="btn" id="icsAll">${ic("event")} Lembretes no Calendário do iPhone</button></div>
+    <div class="list">${open.map(row).join("") || `<div class="empty">Nenhuma conta em aberto</div>`}</div>
     ${paid.length ? `<div class="section-label">Pagas</div><div class="list">${paid.map(row).join("")}</div>` : ""}`;
   $("#icsAll").onclick = () => exportICS(open.map(billToICS), "contas.ics");
   view.onclick = e => {
@@ -339,20 +344,20 @@ function renderGoals(tabs) {
     return `<article class="goal ${reached ? "reached" : ""}">
       <div class="goal-head">
         <h3>${esc(g.name)}</h3>
-        <button class="mini" data-gdel="${g.id}" aria-label="Apagar meta">🗑</button>
+        <button class="mini" data-gdel="${g.id}" aria-label="Apagar meta">${ic("delete")}</button>
       </div>
       <div class="goal-amounts"><b>${money(saved)}</b><span>de ${money(g.target)}</span></div>
       <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Progresso de ${esc(g.name)}">
         <div class="bar-fill" style="width:${pct}%"></div>
       </div>
       <div class="goal-meta">
-        <span>${reached ? "🎉 Meta atingida!" : `${Math.floor(pct)}% · faltam ${money(left)}`}</span>
+        <span>${reached ? `${ic("emoji_events", "inline")} Meta atingida!` : `${Math.floor(pct)}% · faltam ${money(left)}`}</span>
         <span>${pace}</span>
       </div>
       ${last ? `<div class="goal-last">Último: ${last.amount >= 0 ? "+" : "−"}${money(Math.abs(last.amount))} · ${fmtDate(last.date)}</div>` : ""}
       <div class="goal-actions">
-        <button class="btn" data-gadd="${g.id}">＋ Guardar</button>
-        <button class="btn ghost" data-gsub="${g.id}" ${saved <= 0 ? "disabled" : ""}>− Retirar</button>
+        <button class="btn" data-gadd="${g.id}">${ic("add")} Guardar</button>
+        <button class="btn ghost" data-gsub="${g.id}" ${saved <= 0 ? "disabled" : ""}>${ic("remove")} Retirar</button>
       </div>
     </article>`;
   };
@@ -374,7 +379,7 @@ function renderGoals(tabs) {
     const before = goalSaved(g);
     g.history = [...(g.history || []), { amount: sign * n, date: toISODate(new Date()) }];
     saveDB(); renderFinance();
-    if (before < g.target && goalSaved(g) >= g.target) setTimeout(() => toast(`🎉 Parabéns! Você atingiu “${g.name}”`, null, null, 4000), 300);
+    if (before < g.target && goalSaved(g) >= g.target) setTimeout(() => toast(`Parabéns! Você atingiu “${g.name}”`, null, null, 4000), 300);
   });
 
   view.onclick = e => {
@@ -411,8 +416,8 @@ function renderHealth() {
           <div class="t">${esc(h.title)}</div>
           <div class="s">${fmtDate(h.date, h.time)}${h.notes ? " · " + esc(h.notes) : ""}</div>
         </div>
-        ${h.date ? `<button class="mini" data-ics="${h.id}" aria-label="Adicionar ao Calendário">📆</button>` : ""}
-        <button class="mini" data-del="${h.id}" aria-label="Apagar">🗑</button>
+        ${h.date ? `<button class="mini" data-ics="${h.id}" aria-label="Adicionar ao Calendário">${ic("event")}</button>` : ""}
+        <button class="mini" data-del="${h.id}" aria-label="Apagar">${ic("delete")}</button>
       </div>`).join("")}
     </div>`).join("") || `<div class="empty">Nenhum registro médico. Toque em + para adicionar.</div>`;
   view.onclick = e => {
@@ -433,7 +438,7 @@ function renderHealth() {
 function fab(onClick) {
   document.querySelectorAll(".fab").forEach(f => f.remove()); // evita botões + duplicados ao redesenhar a tela
   const b = document.createElement("button");
-  b.className = "fab"; b.textContent = "+"; b.setAttribute("aria-label", "Adicionar");
+  b.className = "fab"; b.innerHTML = ic("add"); b.setAttribute("aria-label", "Adicionar");
   b.onclick = onClick;
   document.body.appendChild(b);
 }
@@ -484,7 +489,7 @@ $("#sheetForm").addEventListener("submit", e => {
   sheet.close();
   const t = $("#toast"), before = t.textContent;
   sheetSubmit?.(v);
-  if (t.textContent === before || !t.classList.contains("show")) toast("Salvo ✓");
+  if (t.textContent === before || !t.classList.contains("show")) toast("Salvo");
   checkAlerts();
 });
 
@@ -497,25 +502,25 @@ function allAlerts() {
     if (e.alertMin < 0 || !e.date) continue;
     const start = parseLocal(e.date, e.time);
     out.push({ id: `ev:${e.id}:${e.date}${e.time}:${e.alertMin}`, section: "agenda", at: new Date(start - e.alertMin * 60e3), start,
-      title: `📅 ${e.title}`, body: `${fmtDate(e.date, e.time)}${e.place ? " · " + e.place : ""}` });
+      title: e.title, body: `${fmtDate(e.date, e.time)}${e.place ? " · " + e.place : ""}` });
   }
   for (const b of db.bills) {
     if (b.paid || b.alertDays < 0) continue;
     const due = parseLocal(b.due, "09:00");
     out.push({ id: `bill:${b.id}:${b.due}:${b.alertDays}`, section: "financeiro", at: new Date(due - b.alertDays * 86400e3), start: new Date(+due + 86400e3),
-      title: `💰 Conta a pagar: ${b.name}`, body: `${money(b.amount)} · vence ${fmtDate(b.due)}` });
+      title: `Conta a pagar: ${b.name}`, body: `${money(b.amount)} · vence ${fmtDate(b.due)}` });
   }
   for (const h of db.health) {
     if (!h.date || !(h.alertMin >= 0)) continue;
     const start = parseLocal(h.date, h.time || "09:00");
     out.push({ id: `hl:${h.id}:${h.date}${h.time}:${h.alertMin}`, section: "medica", at: new Date(start - h.alertMin * 60e3), start,
-      title: `🩺 ${h.type}: ${h.title}`, body: fmtDate(h.date, h.time) });
+      title: `${h.type}: ${h.title}`, body: fmtDate(h.date, h.time) });
   }
   for (const t of db.tasks) {
     if (t.done || !t.due) continue;
     const at = parseLocal(t.due, "09:00");
     out.push({ id: `tk:${t.id}:${t.due}`, section: "tarefas", at, start: new Date(+at + 86400e3),
-      title: `✅ Afazer de hoje`, body: t.title });
+      title: "Afazer de hoje", body: t.title });
   }
   return out;
 }
@@ -564,8 +569,8 @@ $("#bellBtn").onclick = async () => {
   }
   try { if (Notification.permission === "default") await Notification.requestPermission(); } catch {}
   if (Notification.permission === "granted") {
-    await notify("🔔 Notificações ativadas", "Você receberá alertas da agenda, contas e saúde.", "");
-    toast("Notificações ativadas ✓");
+    await notify("Notificações ativadas", "Você receberá alertas da agenda, contas e saúde.", "");
+    toast("Notificações ativadas");
     checkAlerts();
   } else {
     toast("Notificações bloqueadas. Ative em Ajustes → Notificações → Meu App.", null, null, 5000);
@@ -584,7 +589,7 @@ function eventToICS(e) {
 }
 function billToICS(b) {
   const start = parseLocal(b.due, "09:00");
-  return { uid: b.id, start, end: new Date(+start + 1800e3), title: `💰 Pagar: ${b.name} (${money(b.amount)})`, alarmMin: b.alertDays >= 0 ? b.alertDays * 1440 : 0 };
+  return { uid: b.id, start, end: new Date(+start + 1800e3), title: `Pagar: ${b.name} (${money(b.amount)})`, alarmMin: b.alertDays >= 0 ? b.alertDays * 1440 : 0 };
 }
 async function exportICS(items, filename) {
   if (!items.length) return toast("Nada para exportar");
