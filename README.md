@@ -1,6 +1,6 @@
 # Meu App Pessoal
 
-App pessoal para iPhone (PWA, um app web que se instala como app), em modo escuro, com:
+App pessoal para iPhone (PWA, um app web que se instala como app), em tema claro, com:
 
 - **Home** com busca que procura em todas as seções e cards para cada área
 - **Afazeres**: checklist com data opcional

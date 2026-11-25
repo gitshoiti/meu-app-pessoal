@@ -86,10 +86,10 @@ const money = v => Number(v || 0).toLocaleString("pt-BR", { style: "currency", c
 
 /* ---------------- Seções ---------------- */
 const SECTIONS = {
-  tarefas:    { title: "Afazeres",   emoji: "✅", cls: "c-tasks",   key: "tasks" },
-  agenda:     { title: "Minha Agenda", emoji: "📅", cls: "c-agenda",  key: "events" },
-  financeiro: { title: "Financeiro", emoji: "💰", cls: "c-finance", key: "bills" },
-  medica:     { title: "Médico",     emoji: "🩺", cls: "c-health",  key: "health" },
+  tarefas:    { title: "Afazeres",     short: "Afazeres", emoji: "✅", cls: "c-tasks",   key: "tasks" },
+  agenda:     { title: "Minha Agenda", short: "Agenda",   emoji: "📅", cls: "c-agenda",  key: "events" },
+  financeiro: { title: "Financeiro",   short: "Finanças", emoji: "💰", cls: "c-finance", key: "bills" },
+  medica:     { title: "Médico",       short: "Médico",   emoji: "🩺", cls: "c-health",  key: "health" },
 };
 
 /* ---------------- Roteador ---------------- */
@@ -130,10 +130,10 @@ function renderHome() {
     </label>
     <div id="results"></div>
     <div id="cards" class="grid">
-      ${card("tarefas", pendTasks ? `${pendTasks} pendente${pendTasks > 1 ? "s" : ""}` : "Tudo em dia")}
-      ${card("agenda", nextEvent ? `${esc(nextEvent.title)} · ${fmtDate(nextEvent.date, nextEvent.time)}` : "Nada agendado")}
-      ${card("financeiro", openBills.length ? `${openBills.length} a pagar · ${money(totalOpen)}` : "Nenhuma conta aberta")}
-      ${card("medica", nextHealth ? `${esc(nextHealth.title)} · ${fmtDate(nextHealth.date, nextHealth.time)}` : `${db.health.length} registro(s)`)}
+      ${card("tarefas", pendTasks ? `${pendTasks} pendente${pendTasks > 1 ? "s" : ""}` : "Em dia")}
+      ${card("agenda", nextEvent ? shortDay(nextEvent.date) : "Livre")}
+      ${card("financeiro", openBills.length ? `${openBills.length} a pagar` : "Em dia")}
+      ${card("medica", nextHealth ? shortDay(nextHealth.date) : `${db.health.length} reg.`)}
     </div>
     <div class="section-label">Próximos alertas</div>
     <div class="list">${upcomingAlerts().slice(0, 4).map(a => `
@@ -150,8 +150,13 @@ function card(sec, sub) {
   const s = SECTIONS[sec];
   return `<a class="card ${s.cls}" href="#${sec}">
     <div class="emoji">${s.emoji}</div>
-    <div><h3>${s.title}</h3><p>${sub}</p></div>
+    <h3>${s.short}</h3><p>${sub}</p>
   </a>`;
+}
+// "Hoje", "Amanhã" ou "29/11", curto para caber no card
+function shortDay(date) {
+  const d = daysUntil(date);
+  return d === 0 ? "Hoje" : d === 1 ? "Amanhã" : parseLocal(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 function installHint() {
   const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone)").matches;
