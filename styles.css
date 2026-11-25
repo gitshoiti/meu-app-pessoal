@@ -186,3 +186,43 @@ mark { background: color-mix(in srgb, var(--finance) 40%, transparent); color: i
   font: inherit; font-weight: 700; padding: 0; cursor: pointer; pointer-events: auto;
 }
 #toast.show { pointer-events: auto; }
+
+/* ---------- Abas (Contas | Metas) ---------- */
+.segmented {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.segmented button {
+  border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600;
+  padding: 9px 8px; border-radius: 9px; cursor: pointer;
+}
+.segmented button[aria-selected="true"] { background: var(--surface-2); color: var(--text); }
+
+/* ---------- Metas ---------- */
+.goals { display: flex; flex-direction: column; gap: 12px; }
+.goal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.goal-head { display: flex; align-items: center; gap: 8px; }
+.goal-head h3 { flex: 1; margin: 0; font-size: 17px; min-width: 0; overflow-wrap: anywhere; }
+.goal-head .mini { border: 0; background: transparent; color: var(--muted); font-size: 18px; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
+.goal-amounts { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.goal-amounts b { font-size: 22px; }
+.goal-amounts span { color: var(--muted); font-size: 14px; }
+.bar { height: 12px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.bar-fill {
+  height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--finance) 70%, #000), var(--finance));
+  transition: width .6s cubic-bezier(.2,.8,.2,1);
+}
+.goal.reached { border-color: color-mix(in srgb, var(--tasks) 45%, var(--border)); }
+.goal.reached .bar-fill { background: linear-gradient(90deg, color-mix(in srgb, var(--tasks) 70%, #000), var(--tasks)); }
+.goal-meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.goal.reached .goal-meta span:first-child { color: var(--tasks); font-weight: 600; }
+.goal-last { font-size: 12px; color: var(--muted); }
+.late-txt { color: var(--danger); }
+.goal-actions { display: flex; gap: 8px; margin-top: 4px; }
+.goal-actions .btn { flex: 1; padding: 10px 12px; font-size: 14px; }
+.btn:disabled { opacity: .4; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .bar-fill { transition: none; } }

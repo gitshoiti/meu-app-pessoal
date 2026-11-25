@@ -39,6 +39,7 @@ function seed() {
       { id: uid(), name: "Internet", amount: 119.0, due: d(8), paid: false, alertDays: 2 },
       { id: uid(), name: "Cartão de crédito", amount: 1430.55, due: d(-3), paid: true, alertDays: 3 },
     ],
+    goals: exampleGoals(),
     health: [
       { id: uid(), type: "Consulta", title: "Dermatologista", date: d(10), time: "14:30", notes: "Levar exames anteriores", alertMin: 120 },
       { id: uid(), type: "Medicamento", title: "Vitamina D", date: "", time: "08:00", notes: "1 cápsula por dia" },
@@ -46,7 +47,16 @@ function seed() {
     ],
   };
 }
+function exampleGoals() {
+  const d = n => { const x = new Date(); x.setMonth(x.getMonth() + n); return toISODate(x); };
+  return [
+    { id: uid(), name: "Reserva de emergência", target: 10000, deadline: d(10),
+      history: [{ amount: 1500, date: toISODate(new Date()) }, { amount: 1000, date: toISODate(new Date()) }] },
+    { id: uid(), name: "Viagem de férias", target: 4000, deadline: d(6), history: [{ amount: 600, date: toISODate(new Date()) }] },
+  ];
+}
 let db = loadDB();
+if (!Array.isArray(db.goals)) db.goals = exampleGoals(); // quem já usava o app ganha a seção com exemplos
 
 /* ---------------- Datas ---------------- */
 function toISODate(d) {
@@ -155,6 +165,7 @@ function searchIndex() {
     ...db.tasks.map(t => ({ sec: "tarefas", title: t.title, sub: t.due ? fmtDate(t.due) : (t.done ? "Concluída" : "Pendente") })),
     ...db.events.map(e => ({ sec: "agenda", title: e.title, sub: `${fmtDate(e.date, e.time)}${e.place ? " · " + e.place : ""}` })),
     ...db.bills.map(b => ({ sec: "financeiro", title: b.name, sub: `${money(b.amount)} · vence ${fmtDate(b.due)}${b.paid ? " · paga" : ""}` })),
+    ...db.goals.map(g => ({ sec: "financeiro", title: `Meta: ${g.name}`, sub: `${money(goalSaved(g))} de ${money(g.target)}` })),
     ...db.health.map(h => ({ sec: "medica", title: h.title, sub: `${h.type} · ${fmtDate(h.date, h.time)}${h.notes ? " · " + h.notes : ""}` })),
   ];
 }
@@ -258,7 +269,12 @@ function renderFinance() {
       <button class="mini" data-del="${b.id}" aria-label="Apagar">🗑</button>
     </div>`;
   };
-  view.innerHTML = `
+  const tabs = `<div class="segmented" role="tablist">
+      <button role="tab" data-tab="contas" aria-selected="${financeTab === "contas"}">Contas a pagar</button>
+      <button role="tab" data-tab="metas" aria-selected="${financeTab === "metas"}">Metas</button>
+    </div>`;
+  if (financeTab === "metas") return renderGoals(tabs);
+  view.innerHTML = tabs + `
     <div class="summary">
       <div><b>${money(total)}</b><span>em aberto</span></div>
       <div><b>${open.length}</b><span>a pagar</span></div>
@@ -269,6 +285,8 @@ function renderFinance() {
     ${paid.length ? `<div class="section-label">Pagas</div><div class="list">${paid.map(row).join("")}</div>` : ""}`;
   $("#icsAll").onclick = () => exportICS(open.map(billToICS), "contas.ics");
   view.onclick = e => {
+    const tab = e.target.closest("[data-tab]");
+    if (tab) { financeTab = tab.dataset.tab; saveTab(); return renderFinance(); }
     const tg = e.target.closest("[data-toggle]"), del = e.target.closest("[data-del]"), ics = e.target.closest("[data-ics]");
     if (tg) { const b = db.bills.find(x => x.id === tg.dataset.toggle); b.paid = tg.checked; saveDB(); renderFinance(); }
     if (del) removeItem("bills", del.dataset.del, renderFinance);
@@ -281,6 +299,99 @@ function renderFinance() {
     { name: "alertDays", label: "Avisar", type: "select", value: "1",
       options: [["0", "No dia (9h)"], ["1", "1 dia antes"], ["2", "2 dias antes"], ["3", "3 dias antes"], ["7", "1 semana antes"], ["-1", "Sem alerta"]] },
   ], v => { db.bills.push({ id: uid(), name: v.name, amount: parseFloat(String(v.amount).replace(",", ".")), due: v.due, paid: false, alertDays: +v.alertDays }); saveDB(); renderFinance(); }));
+}
+
+/* ---------------- Metas (dentro do Financeiro) ---------------- */
+let financeTab = (() => { try { return localStorage.getItem("meuapp:financeTab") || "contas"; } catch { return "contas"; } })();
+const saveTab = () => { try { localStorage.setItem("meuapp:financeTab", financeTab); } catch {} };
+const goalSaved = g => Math.max(0, (g.history || []).reduce((s, h) => s + Number(h.amount || 0), 0));
+const parseMoney = v => {
+  // Aceita "1.234,56", "1234,56" e "1234.56"
+  let t = String(v ?? "").trim().replace(/\s|R\$/g, "");
+  if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(t);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+};
+function monthsLeft(date) {
+  const now = new Date(), end = parseLocal(date, "23:59");
+  return Math.max(0, (end.getFullYear() - now.getFullYear()) * 12 + end.getMonth() - now.getMonth());
+}
+function renderGoals(tabs) {
+  const totalSaved = db.goals.reduce((s, g) => s + goalSaved(g), 0);
+  const totalTarget = db.goals.reduce((s, g) => s + Number(g.target || 0), 0);
+  const done = db.goals.filter(g => goalSaved(g) >= g.target).length;
+  const cardHTML = g => {
+    const saved = goalSaved(g), pct = g.target > 0 ? Math.min(100, (saved / g.target) * 100) : 0;
+    const left = Math.max(0, g.target - saved), reached = saved >= g.target;
+    let pace = "";
+    if (!reached && g.deadline) {
+      const m = monthsLeft(g.deadline), d = daysUntil(g.deadline);
+      pace = d < 0 ? `<span class="late-txt">prazo passou (${fmtDate(g.deadline)})</span>`
+        : m >= 1 ? `até ${parseLocal(g.deadline).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })} · ${money(left / m)}/mês`
+        : `até ${fmtDate(g.deadline)}`;
+    }
+    const last = (g.history || []).at(-1);
+    return `<article class="goal ${reached ? "reached" : ""}">
+      <div class="goal-head">
+        <h3>${esc(g.name)}</h3>
+        <button class="mini" data-gdel="${g.id}" aria-label="Apagar meta">🗑</button>
+      </div>
+      <div class="goal-amounts"><b>${money(saved)}</b><span>de ${money(g.target)}</span></div>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Progresso de ${esc(g.name)}">
+        <div class="bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="goal-meta">
+        <span>${reached ? "🎉 Meta atingida!" : `${Math.floor(pct)}% · faltam ${money(left)}`}</span>
+        <span>${pace}</span>
+      </div>
+      ${last ? `<div class="goal-last">Último: ${last.amount >= 0 ? "+" : "−"}${money(Math.abs(last.amount))} · ${fmtDate(last.date)}</div>` : ""}
+      <div class="goal-actions">
+        <button class="btn" data-gadd="${g.id}">＋ Guardar</button>
+        <button class="btn ghost" data-gsub="${g.id}" ${saved <= 0 ? "disabled" : ""}>− Retirar</button>
+      </div>
+    </article>`;
+  };
+  view.innerHTML = tabs + `
+    <div class="summary">
+      <div><b>${money(totalSaved)}</b><span>guardado</span></div>
+      <div><b>${totalTarget ? Math.floor(Math.min(100, totalSaved / totalTarget * 100)) : 0}%</b><span>do total</span></div>
+      <div><b>${done}/${db.goals.length}</b><span>atingidas</span></div>
+    </div>
+    <div class="goals">${db.goals.map(cardHTML).join("") || `<div class="empty">Nenhuma meta ainda. Toque em + para criar a primeira.</div>`}</div>`;
+
+  const askAmount = (g, sign) => openSheet(sign > 0 ? `Guardar em “${g.name}”` : `Retirar de “${g.name}”`, [
+    { name: "amount", label: sign > 0 ? "Quanto você guardou? (R$)" : `Quanto vai retirar? (disponível ${money(goalSaved(g))})`,
+      type: "text", inputmode: "decimal", required: true },
+  ], v => {
+    let n = parseMoney(v.amount);
+    if (!(n > 0)) return toast("Digite um valor maior que zero");
+    if (sign < 0) n = Math.min(n, goalSaved(g));
+    const before = goalSaved(g);
+    g.history = [...(g.history || []), { amount: sign * n, date: toISODate(new Date()) }];
+    saveDB(); renderFinance();
+    if (before < g.target && goalSaved(g) >= g.target) setTimeout(() => toast(`🎉 Parabéns! Você atingiu “${g.name}”`, null, null, 4000), 300);
+  });
+
+  view.onclick = e => {
+    const tab = e.target.closest("[data-tab]");
+    if (tab) { financeTab = tab.dataset.tab; saveTab(); return renderFinance(); }
+    const add = e.target.closest("[data-gadd]"), sub = e.target.closest("[data-gsub]"), del = e.target.closest("[data-gdel]");
+    if (add) askAmount(db.goals.find(g => g.id === add.dataset.gadd), 1);
+    if (sub) askAmount(db.goals.find(g => g.id === sub.dataset.gsub), -1);
+    if (del) removeItem("goals", del.dataset.gdel, renderFinance);
+  };
+  fab(() => openSheet("Nova meta", [
+    { name: "name", label: "Nome da meta", required: true },
+    { row: [{ name: "target", label: "Objetivo (R$)", type: "text", inputmode: "decimal", required: true },
+            { name: "start", label: "Já tenho (R$)", type: "text", inputmode: "decimal" }] },
+    { name: "deadline", label: "Prazo (opcional)", type: "date" },
+  ], v => {
+    const target = parseMoney(v.target), start = parseMoney(v.start);
+    if (!(target > 0)) return toast("O objetivo precisa ser maior que zero");
+    db.goals.push({ id: uid(), name: v.name, target, deadline: v.deadline,
+      history: start > 0 ? [{ amount: start, date: toISODate(new Date()) }] : [] });
+    saveDB(); renderFinance();
+  }));
 }
 
 /* ---------------- Médico ---------------- */
@@ -315,6 +426,7 @@ function renderHealth() {
 
 /* ---------------- Utilitários de UI ---------------- */
 function fab(onClick) {
+  document.querySelectorAll(".fab").forEach(f => f.remove()); // evita botões + duplicados ao redesenhar a tela
   const b = document.createElement("button");
   b.className = "fab"; b.textContent = "+"; b.setAttribute("aria-label", "Adicionar");
   b.onclick = onClick;
@@ -365,8 +477,9 @@ $("#sheetForm").addEventListener("submit", e => {
   e.preventDefault();
   const v = Object.fromEntries(new FormData(e.target).entries());
   sheet.close();
+  const t = $("#toast"), before = t.textContent;
   sheetSubmit?.(v);
-  toast("Salvo ✓");
+  if (t.textContent === before || !t.classList.contains("show")) toast("Salvo ✓");
   checkAlerts();
 });
 

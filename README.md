@@ -5,7 +5,7 @@ App pessoal para iPhone (PWA, um app web que se instala como app), em modo escur
 - **Home** com busca que procura em todas as seções e cards para cada área
 - **Afazeres**: checklist com data opcional
 - **Minha Agenda**: compromissos com alerta (na hora, 10 min, 1 h, 1 dia antes…)
-- **Financeiro**: contas a pagar, total em aberto, vencidas e aviso X dias antes
+- **Financeiro**: contas a pagar (total em aberto, vencidas, aviso X dias antes) e **Metas** com barra de progresso, depósitos e retiradas
 - **Médico**: consultas, exames, medicamentos, vacinas e anotações
 - **Notificações** de compromissos, contas e consultas
 - **📆 Exportar para o Calendário do iPhone** (`.ics`): os alarmes ficam no app Calendário nativo e tocam mesmo com o app fechado
