@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Meu App</title>
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="color-scheme" content="dark" />
+
+  <!-- iOS: permite rodar em tela cheia quando adicionado à Tela de Início -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Meu App" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="backBtn" class="icon-btn" aria-label="Voltar" hidden>‹</button>
+    <h1 id="title">Olá 👋</h1>
+    <button id="bellBtn" class="icon-btn" aria-label="Notificações">🔔</button>
+  </header>
+
+  <main id="view"></main>
+
+  <!-- Folha de formulário (adicionar itens) -->
+  <dialog id="sheet">
+    <form id="sheetForm" method="dialog">
+      <h2 id="sheetTitle"></h2>
+      <div id="sheetFields"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="sheetCancel">Cancelar</button>
+        <button type="submit" class="btn primary">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
